@@ -1,34 +1,74 @@
-/**
- * Some predefined delay values (in milliseconds).
- */
-export enum Delays {
-  Short = 500,
-  Medium = 2000,
-  Long = 5000,
-}
+import makeWASocket, { 
+    DisconnectReason,  
+    useMultiFileAuthState,
+    makeInMemoryStore,
+    WAMessage,
+} from '@adiwajshing/baileys'
 
-/**
- * Returns a Promise<string> that resolves after a given time.
- *
- * @param {string} name - A name.
- * @param {number=} [delay=Delays.Medium] - A number of milliseconds to delay resolution of the Promise.
- * @returns {Promise<string>}
- */
-function delayedHello(
-  name: string,
-  delay: number = Delays.Medium,
-): Promise<string> {
-  return new Promise((resolve: (value?: string) => void) =>
-    setTimeout(() => resolve(`Hello, ${name}`), delay),
-  );
-}
+import { Boom } from '@hapi/boom'
 
-// Please see the comment in the .eslintrc.json file about the suppressed rule!
-// Below is an example of how to use ESLint errors suppression. You can read more
-// at https://eslint.org/docs/latest/user-guide/configuring/rules#disabling-rules
+import { sticker } from './modules/sticker'
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export async function greeter(name: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  // The name parameter should be of type string. Any is used only to trigger the rule.
-  return await delayedHello(name, Delays.Long);
+async function connectToWhatsApp () {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys')
+    const store = makeInMemoryStore({ })
+
+    // Handle store data
+    store.readFromFile('./baileys_store.json')
+    // saves the state to a file every 10s
+    setInterval(() => {
+        store.writeToFile('./baileys_store.json')
+    }, 10_000)
+
+    const sock = makeWASocket({
+        // can provide additional config here
+        printQRInTerminal: true,
+        auth: state
+    })
+
+    // bind the store to the socket
+    store.bind(sock.ev)
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update
+        if(connection === 'close') {
+            const shouldReconnect = (lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut
+            console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect)
+            // reconnect if not logged out
+            if(shouldReconnect) {
+                connectToWhatsApp()
+            }
+        } else if(connection === 'open') {
+            console.log('opened connection')
+        }
+    })
+
+    sock.ev.on('messages.upsert', async ({messages}) => {
+        console.log('replying to', messages[0].key.remoteJid)
+
+        const m = messages[0]
+        const messageTypes = Object.keys(m.message) as Array<keyof WAMessage['message']>
+
+        if(messageTypes.length === 0) {
+            console.log('no message type')
+            return
+        }
+
+        if(m.key.fromMe) {
+            console.log('from me')
+            return
+        }
+
+        const messageType = messageTypes[0]
+
+        if(messageType === 'imageMessage') {
+            console.log(m.message.imageMessage)
+
+            sticker(sock, m)
+        }
+    })
+
+    sock.ev.on('creds.update', saveCreds)
 }
+// run in main file
+connectToWhatsApp()

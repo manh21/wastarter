@@ -4,9 +4,17 @@
   "description": "WA Starter is a starter template for WhatsApp bot using BaileysJS",
   "type": "module",
   "dependencies": {
-    "tslib": "~2.4"
+    "@adiwajshing/baileys": "^5.0.0",
+    "@hapi/boom": "^10.0.1",
+    "@types/ws": "^8.5.4",
+    "nanoid": "^4.0.1",
+    "pino": "^8.11.0",
+    "qrcode-terminal": "^0.12.0",
+    "tslib": "~2.4",
+    "wa-sticker-formatter": "^4.4.4"
   },
   "devDependencies": {
+    "@adiwajshing/keyed-db": "^0.2.4",
     "@types/jest": "~29.2",
     "@types/node": "~18",
     "@typescript-eslint/eslint-plugin": "~5.44",

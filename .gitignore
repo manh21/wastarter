@@ -27,3 +27,8 @@ build/
 
 # Misc
 .DS_Store
+
+tmp/*
+
+auth_info_baileys
+baileys_store.json
