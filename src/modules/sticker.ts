@@ -4,7 +4,6 @@ import { nanoid } from 'nanoid'
 
 import { logger } from "../utils/logger"
 
-
 export const sticker = async (sock, message) => {
     const imageBuffer = await downloadMediaMessage(message, 'buffer', {}, {
         logger, reuploadRequest: sock.updateMediaMessage
